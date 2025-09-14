@@ -21,15 +21,15 @@ import { AlternadorCamadasComponent } from './componentes/alternadorCamadas';
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class AppComponent implements AfterViewInit, OnDestroy {
-  
+
   private servicoGeolocalizacao = inject(ServicoGeolocalizacao);
   private servicoClima = inject(ServicoClima);
   private servicoRotas = inject(ServicoRotas);
-  public servicoMapa = inject(ServicoMapa); 
+  public servicoMapa = inject(ServicoMapa);
   private servicoBicicletas = inject(ServicoBicicletas);
   private servicoOnibus = inject(ServicoOnibus);
 
-  
+
   estaCarregando = signal<boolean>(false);
   rotas = signal<Rota[]>([]);
   rotaSelecionada = signal<Rota | null>(null);
@@ -37,18 +37,18 @@ export class AppComponent implements AfterViewInit, OnDestroy {
   clima = signal<any | null>(null);
   qualidadeAr = signal<any | null>(null);
 
-  
+
   mostrarEstacoesBicicleta = signal<boolean>(false);
   private estacoesBicicleta = signal<any[]>([]);
   mostrarTransito = signal<boolean>(false);
   mostrarOnibus = signal<boolean>(false);
   mostrarPontosInteresse = signal<boolean>(false);
 
-  
+
   contadorBikes = signal<number>(0);
   contadorOnibus = signal<number>(0);
 
-  
+
   private coordenadasOrigem: { lat: number, lng: number, cidade: string } | null = null;
   private coordenadasDestino: { lat: number, lng: number, cidade: string } | null = null;
 
@@ -68,12 +68,12 @@ export class AppComponent implements AfterViewInit, OnDestroy {
     this.servicoMapa.removerMapa();
   }
 
-  
-  async aoBuscarRotas(evento: { 
-    origem: { lat: number, lng: number, cidade: string }, 
-    destino: { lat: number, lng: number, cidade: string } 
+
+  async aoBuscarRotas(evento: {
+    origem: { lat: number, lng: number, cidade: string },
+    destino: { lat: number, lng: number, cidade: string }
   }): Promise<void> {
-    
+
     this.coordenadasOrigem = evento.origem;
     this.coordenadasDestino = evento.destino;
 
@@ -84,7 +84,7 @@ export class AppComponent implements AfterViewInit, OnDestroy {
     this.servicoMapa.limparMarcadores();
 
     try {
-      
+
       const [rotas, clima, qualidadeAr] = await Promise.all([
         this.servicoRotas.obterRotas({
           origem: this.coordenadasOrigem,
@@ -98,17 +98,17 @@ export class AppComponent implements AfterViewInit, OnDestroy {
       this.clima.set(clima);
       this.qualidadeAr.set(qualidadeAr);
 
-      
+
       this.servicoMapa.adicionarMarcador('marcador-origem', this.coordenadasOrigem);
       this.servicoMapa.adicionarMarcador('marcador-destino', this.coordenadasDestino);
       this.servicoMapa.ajustarVisao(this.coordenadasOrigem, this.coordenadasDestino);
 
-      
+
       if (rotas.length > 0) {
         this.selecionarRota(rotas[0]);
       }
 
-      
+
       console.log(`Encontradas ${rotas.length} rotas de ${evento.origem.cidade} para ${evento.destino.cidade}`);
 
     } catch (error) {
@@ -122,14 +122,14 @@ export class AppComponent implements AfterViewInit, OnDestroy {
   selecionarRota(rota: Rota): void {
     this.rotaSelecionada.set(rota);
     this.servicoMapa.desenharRota(rota.caminho, rota.corCaminho);
-    
+
     console.log(`Rota selecionada: ${rota.tipo} - ${rota.custo} - ${rota.duracao}`);
   }
 
-  
+
   async alternarEstacoesBicicleta(): Promise<void> {
     this.mostrarEstacoesBicicleta.update(atual => !atual);
-    
+
     if (this.mostrarEstacoesBicicleta()) {
       if (this.estacoesBicicleta().length === 0) {
         try {
@@ -141,7 +141,7 @@ export class AppComponent implements AfterViewInit, OnDestroy {
           this.estacoesBicicleta.set(estacoesMock);
         }
       }
-      
+
       this.servicoMapa.alternarCamadaEstacoesBicicleta(true, this.estacoesBicicleta());
       this.contadorBikes.set(this.estacoesBicicleta().length);
     } else {
@@ -153,7 +153,7 @@ export class AppComponent implements AfterViewInit, OnDestroy {
   alternarTransito(): void {
     this.mostrarTransito.update(atual => !atual);
     this.servicoMapa.alternarCamadaTransito(this.mostrarTransito());
-    
+
     if (this.mostrarTransito()) {
       console.log('Camada de trânsito ativada');
     }
@@ -161,20 +161,20 @@ export class AppComponent implements AfterViewInit, OnDestroy {
 
   alternarOnibus(): void {
     this.mostrarOnibus.update(atual => !atual);
-    
+
     if (this.mostrarOnibus()) {
-      
+
       const cidade = this.coordenadasOrigem?.cidade || 'São Paulo';
       const onibusProximos = this.servicoOnibus.obterOnibusProximosMock(cidade);
-      
+
       this.servicoMapa.alternarCamadaOnibus(true, onibusProximos);
       this.contadorOnibus.set(onibusProximos.length);
-      
-      
+
+
       if (!this.erroBusca()) {
         this.erroBusca.set(`Mostrando ${onibusProximos.length} linhas de ônibus em ${cidade} (simulação)`);
-        
-        
+
+
         setTimeout(() => {
           if (this.erroBusca()?.includes('simulação')) {
             this.erroBusca.set(null);
@@ -184,8 +184,8 @@ export class AppComponent implements AfterViewInit, OnDestroy {
     } else {
       this.servicoMapa.alternarCamadaOnibus(false, []);
       this.contadorOnibus.set(0);
-      
-      
+
+
       if (this.erroBusca()?.includes('simulação')) {
         this.erroBusca.set(null);
       }
@@ -194,18 +194,18 @@ export class AppComponent implements AfterViewInit, OnDestroy {
 
   alternarPontosInteresse(): void {
     this.mostrarPontosInteresse.update(atual => !atual);
-    
+
     if (this.mostrarPontosInteresse()) {
-      
-      
+
+
       console.log('Camada de pontos de interesse ativada');
     }
   }
 
-  
+
   obterInformacoesCidadeAtual(): string {
     if (!this.coordenadasOrigem) return '';
-    
+
     const info = this.servicoRotas.obterInformacoesCidade(this.coordenadasOrigem.cidade);
     return `${this.coordenadasOrigem.cidade}: ${info.transporte.length} linhas • ${info.bicicletas ? 'Bikes disponíveis' : 'Sem bikes'} • ${info.tarifasDisponiveis.length} tarifas`;
   }
@@ -217,12 +217,12 @@ export class AppComponent implements AfterViewInit, OnDestroy {
     rotaMaisSustentavel?: string;
   } {
     const rotas = this.rotas();
-    
+
     if (rotas.length === 0) {
       return { totalRotas: 0 };
     }
 
-    const rotaRapida = rotas.reduce((prev, current) => 
+    const rotaRapida = rotas.reduce((prev, current) =>
       prev.detalhes.tempoTotal < current.detalhes.tempoTotal ? prev : current
     );
 
@@ -232,7 +232,7 @@ export class AppComponent implements AfterViewInit, OnDestroy {
       return custoPrev < custoCurrent ? prev : current;
     });
 
-    const rotaSustentavel = rotas.reduce((prev, current) => 
+    const rotaSustentavel = rotas.reduce((prev, current) =>
       prev.sustentabilidade.pontuacao > current.sustentabilidade.pontuacao ? prev : current
     );
 
@@ -244,3 +244,4 @@ export class AppComponent implements AfterViewInit, OnDestroy {
     };
   }
 }
+

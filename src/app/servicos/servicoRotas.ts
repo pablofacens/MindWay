@@ -1,6 +1,44 @@
 import { Injectable, inject } from '@angular/core';
 import { ServicoOnibus } from './servicoOnibus';
 import { ServicoBicicletas } from './servicoBicicletas';
+import { ServicoChavesApi } from './servicoChavesApi';
+
+type Coordenada = { lat: number, lng: number };
+
+
+interface OpenRouteServiceResponse {
+  routes: OpenRouteServiceRoute[];
+}
+
+interface OpenRouteServiceRoute {
+  summary: { distance: number; duration: number; };
+  segments: OpenRouteServiceSegment[];
+  geometry: string;
+  instructions: OpenRouteServiceInstruction[];
+}
+
+interface OpenRouteServiceSegment {
+  distance: number;
+  duration: number;
+  steps: OpenRouteServiceStep[];
+}
+
+interface OpenRouteServiceStep {
+  distance: number;
+  duration: number;
+  instruction: string;
+  name: string;
+  type: number;
+  way_points: number[];
+}
+
+interface OpenRouteServiceInstruction {
+  distance: number;
+  duration: number;
+  text: string;
+  street_name: string;
+  way_points: number[];
+}
 
 export interface Rota {
   id: number;
@@ -16,7 +54,7 @@ export interface Rota {
     nome: string;
   }[];
   classesCor: string;
-  caminho: { lat: number, lng: number }[];
+  caminho: Coordenada[];
   corCaminho: string;
   detalhes: {
     distancia: string;
@@ -24,24 +62,22 @@ export interface Rota {
     linhasOnibus?: string[];
     custoTransporte?: string;
     distanciaCaminhada?: string;
-    tempoTotal: number; 
-    emissaoCO2?: string;
-    calorias?: number;
+    tempoTotal: number;
   };
 }
 
 interface OpcoesRota {
-  origem: { lat: number, lng: number, cidade?: string };
-  destino: { lat: number, lng: number, cidade?: string };
+  origem: Coordenada & { cidade?: string };
+  destino: Coordenada & { cidade?: string };
 }
 
 @Injectable({
   providedIn: 'root'
 })
 export class ServicoRotas {
-
   private servicoOnibus = inject(ServicoOnibus);
   private servicoBicicletas = inject(ServicoBicicletas);
+  private servicoChavesApi = inject(ServicoChavesApi);
 
   private icones = {
     caminhada: `<svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="w-6 h-6 text-green-700"><path stroke-linecap="round" stroke-linejoin="round" d="M15.75 6a3.75 3.75 0 11-7.5 0 3.75 3.75 0 017.5 0zM4.501 20.118a7.5 7.5 0 0114.998 0A17.933 17.933 0 0112 21.75c-2.676 0-5.216-.584-7.499-1.632z" /></svg>`,
@@ -53,259 +89,468 @@ export class ServicoRotas {
   constructor() { }
 
   async obterRotas(opcoes: OpcoesRota): Promise<Rota[]> {
-    const distancia = this.calcularDistancia(opcoes.origem, opcoes.destino);
     const cidadeOrigem = opcoes.origem.cidade || this.detectarCidade(opcoes.origem);
     const cidadeDestino = opcoes.destino.cidade || this.detectarCidade(opcoes.destino);
-    
-    
-    const latMedio = (opcoes.origem.lat + opcoes.destino.lat) / 2;
-    const lngMedio = (opcoes.origem.lng + opcoes.destino.lng) / 2;
-
-    const intermediarioEconomico = { lat: latMedio + 0.005, lng: lngMedio - 0.005 };
-    const intermediarioVerde = { lat: latMedio - 0.005, lng: lngMedio + 0.005 };
 
     const rotas: Rota[] = [];
 
-    
-    const rotaRapida = await this.criarRotaRapida(distancia, opcoes, cidadeOrigem, cidadeDestino);
-    if (rotaRapida) rotas.push(rotaRapida);
 
-    
-    const rotaEconomica = await this.criarRotaEconomica(
-      distancia, opcoes, cidadeOrigem, cidadeDestino, intermediarioEconomico
-    );
-    if (rotaEconomica) rotas.push(rotaEconomica);
+    const rotaCarroORS = await this.obterCaminhoOpenRouteService(opcoes.origem, opcoes.destino, 'driving-car');
+    const rotaCaminhadaORS = await this.obterCaminhoOpenRouteService(opcoes.origem, opcoes.destino, 'foot-walking');
 
-    
-    const rotaVerde = await this.criarRotaVerde(
-      distancia, opcoes, cidadeOrigem, cidadeDestino, intermediarioVerde
-    );
-    if (rotaVerde) rotas.push(rotaVerde);
+
+    if (rotaCarroORS && rotaCarroORS.summary) {
+      const rotaRapida = this.criarRotaRapida(
+        rotaCarroORS.summary.distance / 1000,
+        opcoes,
+        cidadeOrigem,
+        cidadeDestino,
+        this.extrairGeometriaORS(rotaCarroORS),
+        this.converterDuracaoSegundosParaMinutos(rotaCarroORS.summary.duration),
+        this.extrairPassosORS(rotaCarroORS)
+      );
+      if (rotaRapida) rotas.push(rotaRapida);
+    } else {
+      console.warn('Rota de carro não pôde ser calculada');
+    }
+
+
+    const rotaTransportePublico = await this.criarRotaTransportePublico(opcoes, cidadeOrigem, cidadeDestino);
+    if (rotaTransportePublico) rotas.push(rotaTransportePublico);
+
+
+    const rotaBicicletaInteligente = await this.criarRotaBicicletaInteligente(opcoes, cidadeOrigem, cidadeDestino);
+    if (rotaBicicletaInteligente) rotas.push(rotaBicicletaInteligente);
 
     return rotas;
   }
 
-  private async criarRotaRapida(
-    distancia: number, 
-    opcoes: OpcoesRota, 
-    cidadeOrigem: string, 
-    cidadeDestino: string
-  ): Promise<Rota | null> {
-    
-    const tarifaOnibus = this.servicoOnibus.calcularTarifaViagem(cidadeOrigem, cidadeDestino);
-    const tarifaMetro = cidadeOrigem === 'São Paulo' ? 5.00 : 0; 
-    const custoTotal = tarifaOnibus.tarifa + tarifaMetro;
-    
-    const tempoBase = Math.max(20, distancia * 4 + 12);
-    const modais = tarifaMetro > 0 
-      ? [{ nome: 'Metrô', icone: this.icones.metro }, { nome: 'Ônibus', icone: this.icones.onibus }]
-      : [{ nome: 'Ônibus Expresso', icone: this.icones.onibus }];
+  private async obterCaminhoOpenRouteService(origem: Coordenada, destino: Coordenada, perfil: 'driving-car' | 'cycling-regular' | 'foot-walking'): Promise<OpenRouteServiceRoute | null> {
+    const chaveApi = this.servicoChavesApi.obterChaveApi('openRouteService');
+    if (!chaveApi || chaveApi.startsWith('SUA_CHAVE')) {
+      console.warn("Chave da Openrouteservice API não configurada. Usando rota em linha reta.");
+      return null;
+    }
 
-    const passos = tarifaMetro > 0 
-      ? [
-          'Caminhada até estação de metrô (5 min)',
-          'Viagem de metrô (12 min)',
-          'Transferência para ônibus (3 min)',
-          `Ônibus ${tarifaOnibus.linhasSugeridas[0]?.numero || 'municipal'} (${Math.round(tempoBase * 0.6)} min)`,
-          'Caminhada final (3 min)'
-        ]
-      : [
-          'Caminhada até ponto de ônibus (4 min)',
-          `Ônibus ${tarifaOnibus.linhasSugeridas[0]?.numero || 'expresso'} (${Math.round(tempoBase * 0.8)} min)`,
-          'Caminhada final (3 min)'
-        ];
+    const url = `https://api.openrouteservice.org/v2/directions/${perfil}`;
+    const cabecalhos = {
+      'Accept': 'application/json',
+      'Content-Type': 'application/json',
+      'Authorization': chaveApi
+    };
+
+    const corpo = {
+      coordinates: [
+        [origem.lng, origem.lat],
+        [destino.lng, destino.lat]
+      ],
+      instructions: true,
+      instructions_format: "text",
+      preference: "fastest",
+      units: "km",
+      language: "pt"
+    };
+
+    try {
+      const resposta = await fetch(url, {
+        method: 'POST',
+        headers: cabecalhos,
+        body: JSON.stringify(corpo)
+      });
+
+      if (!resposta.ok) {
+        const dadosErro = await resposta.json();
+        console.error(`Erro na Openrouteservice API (${resposta.status}): ${dadosErro.error?.message || 'Erro desconhecido'}`);
+        return null;
+      }
+
+      const dados: OpenRouteServiceResponse = await resposta.json();
+      if (dados.routes && dados.routes.length > 0) {
+        return dados.routes[0];
+      }
+      return null;
+    } catch (erro) {
+      console.error("Erro ao buscar caminho real da Openrouteservice API:", erro);
+      return null;
+    }
+  }
+
+
+  private extrairGeometriaORS(rotaORS: OpenRouteServiceRoute): Coordenada[] {
+
+    if (!rotaORS) {
+      console.warn('Rota ORS não fornecida');
+      return [];
+    }
+
+
+    if (typeof rotaORS.geometry === 'string' && rotaORS.geometry.length > 0) {
+      return this.decodificarPolylineORS(rotaORS.geometry);
+    } else if (rotaORS.geometry && Array.isArray((rotaORS.geometry as any).coordinates)) {
+
+      const coordenadas = (rotaORS.geometry as any).coordinates;
+      return coordenadas.map((coord: number[]) => ({
+        lat: coord[1],
+        lng: coord[0]
+      }));
+    } else {
+
+      console.warn('Geometria da rota não encontrada, usando pontos dos segmentos');
+
+
+      if (rotaORS.segments && Array.isArray(rotaORS.segments)) {
+        const coordenadas: Coordenada[] = [];
+        rotaORS.segments.forEach(segmento => {
+          if (segmento.steps && Array.isArray(segmento.steps)) {
+            segmento.steps.forEach(passo => {
+              if (passo.way_points && Array.isArray(passo.way_points)) {
+
+
+
+              }
+            });
+          }
+        });
+      }
+
+      return [];
+    }
+  }
+
+
+  private decodificarPolylineORS(stringCodificada: string): Coordenada[] {
+    let indice = 0, lat = 0, lng = 0, coordenadas: Coordenada[] = [];
+    let deslocamento = 0, resultado = 0, byte = null;
+
+    while (indice < stringCodificada.length) {
+      byte = null;
+      deslocamento = 0;
+      resultado = 0;
+      do {
+        byte = stringCodificada.charCodeAt(indice++) - 63;
+        resultado |= (byte & 0x1f) << deslocamento;
+        deslocamento += 5;
+      } while (byte >= 0x20);
+      const dLat = ((resultado & 1) ? ~(resultado >> 1) : (resultado >> 1));
+      lat += dLat;
+
+      deslocamento = 0;
+      resultado = 0;
+      do {
+        byte = stringCodificada.charCodeAt(indice++) - 63;
+        resultado |= (byte & 0x1f) << deslocamento;
+        deslocamento += 5;
+      } while (byte >= 0x20);
+      const dLng = ((resultado & 1) ? ~(resultado >> 1) : (resultado >> 1));
+      lng += dLng;
+
+      coordenadas.push({ lat: lat / 1e5, lng: lng / 1e5 });
+    }
+    return coordenadas;
+  }
+
+  private extrairPassosORS(rotaORS: OpenRouteServiceRoute): string[] {
+    const passos: string[] = [];
+
+
+    if (rotaORS.instructions && Array.isArray(rotaORS.instructions)) {
+      rotaORS.instructions.forEach(instrucao => {
+        if (instrucao && instrucao.text) {
+          passos.push(instrucao.text);
+        }
+      });
+    } else if (rotaORS.segments && Array.isArray(rotaORS.segments)) {
+
+      rotaORS.segments.forEach(segmento => {
+        if (segmento.steps && Array.isArray(segmento.steps)) {
+          segmento.steps.forEach(passo => {
+            if (passo && passo.instruction) {
+              passos.push(passo.instruction);
+            }
+          });
+        }
+      });
+    }
+
+
+    if (passos.length === 0) {
+      passos.push('Siga a rota indicada no mapa');
+      passos.push('Continue até o destino');
+    }
+
+    return passos;
+  }
+
+  private converterDuracaoSegundosParaMinutos(segundos: number): number {
+    return Math.round(segundos / 60);
+  }
+
+  private criarRotaRapida(distanciaKm: number, opcoes: OpcoesRota, cidadeOrigem: string, cidadeDestino: string, caminho: Coordenada[], duracaoMinutos: number, passos: string[]): Rota | null {
+    const tarifaInfo = this.servicoOnibus.calcularTarifaViagem(cidadeOrigem, cidadeDestino);
+    const custoTotal = tarifaInfo.tarifa + (cidadeOrigem === 'São Paulo' ? 5.00 : 0);
 
     return {
       id: 1,
       tipo: 'Rápida',
-      duracao: this.formatarDuracao(tempoBase),
+      duracao: this.formatarDuracao(duracaoMinutos),
       custo: `R$ ${custoTotal.toFixed(2)}`,
-      sustentabilidade: { pontuacao: 6, descricao: 'Médio Impacto' },
-      modais: modais,
+      sustentabilidade: {
+        pontuacao: 6,
+        descricao: 'Médio Impacto'
+      },
+      modais: cidadeOrigem === 'São Paulo' ? [
+        { nome: 'Metrô', icone: this.icones.metro },
+        { nome: 'Ônibus', icone: this.icones.onibus }
+      ] : [
+        { nome: 'Ônibus Expresso', icone: this.icones.onibus }
+      ],
       classesCor: 'border-blue-300 ring-blue-400',
       corCaminho: '#3b82f6',
-      caminho: [opcoes.origem, opcoes.destino],
+      caminho: caminho,
       detalhes: {
-        distancia: `${distancia.toFixed(1)} km`,
-        passos: passos,
-        linhasOnibus: tarifaOnibus.linhasSugeridas.map(l => l.numero),
-        custoTransporte: `${tarifaOnibus.tipo}: R$ ${custoTotal.toFixed(2)}`,
-        distanciaCaminhada: '400m',
-        tempoTotal: Math.round(tempoBase),
-        emissaoCO2: `${(distancia * 0.12).toFixed(2)} kg`,
-        calorias: 45
-      }
-    };
-  }
-
-  private async criarRotaEconomica(
-    distancia: number, 
-    opcoes: OpcoesRota, 
-    cidadeOrigem: string, 
-    cidadeDestino: string,
-    intermediario: { lat: number, lng: number }
-  ): Promise<Rota | null> {
-    
-    const tarifaInfo = this.servicoOnibus.calcularTarifaViagem(cidadeOrigem, cidadeDestino);
-    const tempoBase = Math.max(35, distancia * 7 + 20);
-    
-    const passos = [
-      'Caminhada até ponto de ônibus (6 min)',
-      `Ônibus ${tarifaInfo.linhasSugeridas[0]?.numero || 'municipal'} (${Math.round(tempoBase * 0.6)} min)`,
-    ];
-
-    
-    if (tarifaInfo.linhasSugeridas.length > 1) {
-      passos.push(`Transferência - ${tarifaInfo.linhasSugeridas[1].numero} (${Math.round(tempoBase * 0.25)} min)`);
-    }
-    
-    passos.push('Caminhada final (8 min)');
-
-    return {
-      id: 2,
-      tipo: 'Econômica',
-      duracao: this.formatarDuracao(tempoBase),
-      custo: `R$ ${tarifaInfo.tarifa.toFixed(2)}`,
-      sustentabilidade: { pontuacao: 8, descricao: 'Baixo Impacto' },
-      modais: [{ nome: 'Ônibus', icone: this.icones.onibus }],
-      classesCor: 'border-yellow-300 ring-yellow-400',
-      corCaminho: '#f59e0b',
-      caminho: [opcoes.origem, intermediario, opcoes.destino],
-      detalhes: {
-        distancia: `${(distancia * 1.15).toFixed(1)} km`,
+        distancia: `${distanciaKm.toFixed(1)} km`,
         passos: passos,
         linhasOnibus: tarifaInfo.linhasSugeridas.map(l => l.numero),
-        custoTransporte: `${tarifaInfo.tipo}: R$ ${tarifaInfo.tarifa.toFixed(2)}`,
-        distanciaCaminhada: '750m',
-        tempoTotal: Math.round(tempoBase),
-        emissaoCO2: `${(distancia * 0.08).toFixed(2)} kg`,
-        calorias: 85
+        custoTransporte: `${tarifaInfo.tipo}: R$ ${custoTotal.toFixed(2)}`,
+        distanciaCaminhada: '400m',
+        tempoTotal: duracaoMinutos,
       }
     };
   }
 
-  private async criarRotaVerde(
-    distancia: number, 
-    opcoes: OpcoesRota, 
-    cidadeOrigem: string, 
-    cidadeDestino: string,
-    intermediario: { lat: number, lng: number }
-  ): Promise<Rota | null> {
-    
-    const tarifasBike = this.servicoBicicletas.obterTarifasBicicleta(cidadeOrigem);
-    const tempoViagem = Math.max(45, distancia * 10 + 25);
-    const tempoBase = Math.round(tempoViagem);
-    
-    
-    let custoBike = 0;
-    let descricaoCusto = 'Gratuito';
-    
-    if (tarifasBike.length > 0) {
-      const sistemaPreferido = tarifasBike[0];
-      const custocalc = this.servicoBicicletas.calcularCustoBicicleta(
-        sistemaPreferido.sistema, 
-        tempoBase
-      );
-      custoBike = custocalc.custo;
-      descricaoCusto = custocalc.gratuito ? 'Gratuito' : `R$ ${custoBike.toFixed(2)}`;
-    }
-
-    const estacaoProxima = this.servicoBicicletas.obterEstacaoMaisProxima(
-      opcoes.origem.lat, 
-      opcoes.origem.lng, 
-      cidadeOrigem
-    );
-
-    const passos = [
-      `Caminhada até estação ${estacaoProxima?.nome || 'de bikes'} (4 min)`,
-      `Bicicleta pela ciclovia (${Math.round(tempoBase * 0.75)} min)`,
-      'Devolução da bicicleta (2 min)',
-      'Caminhada final (12 min)'
-    ];
-
+  private criarRotaVerde(distanciaKm: number, opcoes: OpcoesRota, cidadeOrigem: string, cidadeDestino: string, caminho: Coordenada[], duracaoMinutos: number, passos: string[]): Rota | null {
     return {
       id: 3,
       tipo: 'Verde',
-      duracao: this.formatarDuracao(tempoBase),
-      custo: descricaoCusto,
-      sustentabilidade: { pontuacao: 10, descricao: 'Zero Emissão' },
+      duracao: this.formatarDuracao(duracaoMinutos),
+      custo: 'Gratuito',
+      sustentabilidade: {
+        pontuacao: 10,
+        descricao: 'Zero Emissão'
+      },
       modais: [
-        { nome: 'Bicicleta', icone: this.icones.bicicleta }, 
+        { nome: 'Bicicleta', icone: this.icones.bicicleta },
         { nome: 'Caminhada', icone: this.icones.caminhada }
       ],
       classesCor: 'border-green-300 ring-green-400',
       corCaminho: '#22c55e',
-      caminho: [opcoes.origem, intermediario, opcoes.destino],
+      caminho: caminho,
       detalhes: {
-        distancia: `${(distancia * 1.08).toFixed(1)} km`,
+        distancia: `${(distanciaKm * 1.08).toFixed(1)} km`,
         passos: passos,
-        custoTransporte: `Sistema: ${tarifasBike[0]?.sistema || 'Municipal'}`,
+        custoTransporte: 'Sistema de bikes compartilhadas',
         distanciaCaminhada: '850m',
-        tempoTotal: tempoBase,
-        emissaoCO2: '0.00 kg',
-        calorias: Math.round(distancia * 45 + 120) 
+        tempoTotal: duracaoMinutos
       }
     };
   }
 
-  private calcularDistancia(origem: { lat: number, lng: number }, destino: { lat: number, lng: number }): number {
-    const R = 6371; 
-    const dLat = this.deg2rad(destino.lat - origem.lat);
-    const dLng = this.deg2rad(destino.lng - origem.lng);
-    const a = 
-      Math.sin(dLat/2) * Math.sin(dLat/2) +
-      Math.cos(this.deg2rad(origem.lat)) * Math.cos(this.deg2rad(destino.lat)) * 
-      Math.sin(dLng/2) * Math.sin(dLng/2);
-    const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
+
+  private async criarRotaBicicletaInteligente(opcoes: OpcoesRota, cidadeOrigem: string, cidadeDestino: string): Promise<Rota | null> {
+    try {
+
+      const estacoesBike = await this.servicoBicicletas.obterEstacoesMock();
+      const estacaoOrigem = this.encontrarEstacaoProxima(opcoes.origem, estacoesBike);
+
+      if (!estacaoOrigem) {
+
+        const rotaBikeDireta = await this.obterCaminhoOpenRouteService(opcoes.origem, opcoes.destino, 'cycling-regular');
+        if (rotaBikeDireta && rotaBikeDireta.summary) {
+          return this.criarRotaVerde(
+            rotaBikeDireta.summary.distance / 1000,
+            opcoes,
+            cidadeOrigem,
+            cidadeDestino,
+            this.extrairGeometriaORS(rotaBikeDireta),
+            this.converterDuracaoSegundosParaMinutos(rotaBikeDireta.summary.duration),
+            ['Rota direta de bicicleta']
+          );
+        }
+        return null;
+      }
+
+
+      const rotaParaEstacao = await this.obterCaminhoOpenRouteService(opcoes.origem, { lat: estacaoOrigem.lat, lng: estacaoOrigem.lng || estacaoOrigem.lon }, 'foot-walking');
+      const rotaDeBike = await this.obterCaminhoOpenRouteService({ lat: estacaoOrigem.lat, lng: estacaoOrigem.lng || estacaoOrigem.lon }, opcoes.destino, 'cycling-regular');
+
+      if (!rotaParaEstacao || !rotaDeBike || !rotaParaEstacao.summary || !rotaDeBike.summary) {
+        return null;
+      }
+
+
+      const caminhoCompleto = [
+        ...this.extrairGeometriaORS(rotaParaEstacao),
+        ...this.extrairGeometriaORS(rotaDeBike)
+      ];
+
+      const distanciaTotal = (rotaParaEstacao.summary.distance + rotaDeBike.summary.distance) / 1000;
+      const duracaoTotal = this.converterDuracaoSegundosParaMinutos(rotaParaEstacao.summary.duration + rotaDeBike.summary.duration);
+
+      const passosMultimodais = [
+        `Caminhe ${(rotaParaEstacao.summary.distance / 1000).toFixed(1)}km até a estação ${estacaoOrigem.nome}`,
+        `Retire uma bicicleta da estação`,
+        `Pedale ${(rotaDeBike.summary.distance / 1000).toFixed(1)}km até o destino`,
+        'Devolva a bicicleta em uma estação próxima ao destino'
+      ];
+
+      return {
+        id: 3,
+        tipo: 'Verde',
+        duracao: this.formatarDuracao(duracaoTotal),
+        custo: 'R$ 4,50/30min',
+        sustentabilidade: {
+          pontuacao: 10,
+          descricao: 'Zero Emissão'
+        },
+        modais: [
+          { nome: 'Caminhada', icone: this.icones.caminhada },
+          { nome: 'Bicicleta', icone: this.icones.bicicleta }
+        ],
+        classesCor: 'border-green-300 ring-green-400',
+        corCaminho: '#22c55e',
+        caminho: caminhoCompleto,
+        detalhes: {
+          distancia: `${distanciaTotal.toFixed(1)} km`,
+          passos: passosMultimodais,
+          custoTransporte: 'Sistema de bikes compartilhadas',
+          distanciaCaminhada: `${(rotaParaEstacao.summary.distance / 1000).toFixed(1)}km`,
+          tempoTotal: duracaoTotal
+        }
+      };
+
+    } catch (erro) {
+      console.error('Erro ao criar rota de bicicleta inteligente:', erro);
+      return null;
+    }
+  }
+
+
+  private async criarRotaTransportePublico(opcoes: OpcoesRota, cidadeOrigem: string, cidadeDestino: string): Promise<Rota | null> {
+    try {
+
+      const rotaCaminhada = await this.obterCaminhoOpenRouteService(opcoes.origem, opcoes.destino, 'foot-walking');
+
+      if (!rotaCaminhada || !rotaCaminhada.summary) {
+        return null;
+      }
+
+
+      const linhasDisponiveis = this.servicoOnibus.calcularTarifaViagem(cidadeOrigem, cidadeDestino);
+
+
+      const distanciaTotal = rotaCaminhada.summary.distance / 1000;
+      const duracaoEstimada = Math.round((distanciaTotal / 15) * 60) + 20;
+
+      const passosTransportePublico = [
+        'Caminhe até o ponto de ônibus mais próximo (5-10 min)',
+        `Embarque na linha ${linhasDisponiveis.linhasSugeridas[0]?.numero || 'XXX'}`,
+        `Viaje por aproximadamente ${Math.round(distanciaTotal * 0.8)} km`,
+        'Desembarque no ponto mais próximo do destino',
+        'Caminhe até o destino final (5-10 min)'
+      ];
+
+      return {
+        id: 2,
+        tipo: 'Econômica',
+        duracao: this.formatarDuracao(duracaoEstimada),
+        custo: `R$ ${linhasDisponiveis.tarifa.toFixed(2)}`,
+        sustentabilidade: {
+          pontuacao: 8,
+          descricao: 'Baixo Impacto'
+        },
+        modais: [
+          { nome: 'Caminhada', icone: this.icones.caminhada },
+          { nome: 'Ônibus', icone: this.icones.onibus }
+        ],
+        classesCor: 'border-yellow-300 ring-yellow-400',
+        corCaminho: '#f59e0b',
+        caminho: this.extrairGeometriaORS(rotaCaminhada),
+        detalhes: {
+          distancia: `${distanciaTotal.toFixed(1)} km`,
+          passos: passosTransportePublico,
+          linhasOnibus: linhasDisponiveis.linhasSugeridas.map(l => l.numero),
+          custoTransporte: `${linhasDisponiveis.tipo}: R$ ${linhasDisponiveis.tarifa.toFixed(2)}`,
+          distanciaCaminhada: '0.8km',
+          tempoTotal: duracaoEstimada
+        }
+      };
+
+    } catch (erro) {
+      console.error('Erro ao criar rota de transporte público:', erro);
+      return null;
+    }
+  }
+
+
+  private encontrarEstacaoProxima(coordenada: Coordenada, estacoes: any[]): any | null {
+    if (!estacoes || estacoes.length === 0) {
+      return null;
+    }
+
+    let estacaoMaisProxima = null;
+    let menorDistancia = Infinity;
+
+    for (const estacao of estacoes) {
+      const lat = estacao.lat;
+      const lng = estacao.lng || estacao.lon;
+
+      if (lat && lng) {
+        const distancia = this.calcularDistancia(coordenada, { lat, lng });
+        if (distancia < menorDistancia) {
+          menorDistancia = distancia;
+          estacaoMaisProxima = estacao;
+        }
+      }
+    }
+
+
+    return menorDistancia <= 2.0 ? estacaoMaisProxima : null;
+  }
+
+  private calcularDistancia(origem: Coordenada, destino: Coordenada): number {
+    const R = 6371;
+    const dLat = this.grausParaRadianos(destino.lat - origem.lat);
+    const dLng = this.grausParaRadianos(destino.lng - origem.lng);
+    const a = Math.sin(dLat / 2) * Math.sin(dLat / 2) +
+      Math.cos(this.grausParaRadianos(origem.lat)) * Math.cos(this.grausParaRadianos(destino.lat)) *
+      Math.sin(dLng / 2) * Math.sin(dLng / 2);
+    const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
     return R * c;
   }
 
-  private deg2rad(deg: number): number {
-    return deg * (Math.PI/180);
+  private grausParaRadianos(graus: number): number {
+    return graus * (Math.PI / 180);
   }
 
   private formatarDuracao(minutos: number): string {
     const horas = Math.floor(minutos / 60);
     const mins = Math.round(minutos % 60);
-    
     if (horas > 0) {
       return `${horas}h ${mins}min`;
     }
     return `${mins} min`;
   }
 
-  private detectarCidade(coords: { lat: number, lng: number }): string {
-    
-    
-    
-    if (coords.lat >= -23.7 && coords.lat <= -23.4 && 
-        coords.lng >= -46.8 && coords.lng <= -46.4) {
+  private detectarCidade(coords: Coordenada): string {
+
+    if (coords.lat >= -23.7 && coords.lat <= -23.4 && coords.lng >= -46.8 && coords.lng <= -46.4) {
       return 'São Paulo';
     }
-    
-    
-    if (coords.lat >= -23.6 && coords.lat <= -23.4 && 
-        coords.lng >= -47.6 && coords.lng <= -47.3) {
+
+    if (coords.lat >= -23.6 && coords.lat <= -23.4 && coords.lng >= -47.6 && coords.lng <= -47.3) {
       return 'Sorocaba';
     }
-    
-    
-    if (coords.lat >= -23.4 && coords.lat <= -23.1 && 
-        coords.lng >= -47.4 && coords.lng <= -47.1) {
+
+    if (coords.lat >= -23.4 && coords.lat <= -23.1 && coords.lng >= -47.4 && coords.lng <= -47.1) {
       return 'Itu';
     }
-    
-    
-    if (coords.lat >= -22.95 && coords.lat <= -22.8 && 
-        coords.lng >= -47.2 && coords.lng <= -46.9) {
+
+    if (coords.lat >= -22.95 && coords.lat <= -22.8 && coords.lng >= -47.2 && coords.lng <= -46.9) {
       return 'Campinas';
     }
-    
-    
     return 'São Paulo';
   }
 
-  
   obterInformacoesCidade(cidade: string): {
     transporte: string[];
     bicicletas: boolean;
@@ -314,7 +559,7 @@ export class ServicoRotas {
     const linhasOnibus = this.servicoOnibus.obterLinhasPorCidade(cidade);
     const sistemasBike = this.servicoBicicletas.obterSistemasPorCidade(cidade);
     const tarifasOnibus = this.servicoOnibus.obterTarifasPorCidade(cidade);
-    
+
     return {
       transporte: linhasOnibus.map(l => l.numero),
       bicicletas: sistemasBike.length > 0,
@@ -324,16 +569,15 @@ export class ServicoRotas {
 
   obterEstatisticasRota(rota: Rota): {
     eficiencia: string;
-    sustentabilidade: string;
     economia: string;
   } {
     const tempoHoras = rota.detalhes.tempoTotal / 60;
     const custoPorKm = parseFloat(rota.custo.replace('R$ ', '').replace(',', '.')) / parseFloat(rota.detalhes.distancia);
-    
+
     return {
       eficiencia: `${(parseFloat(rota.detalhes.distancia) / tempoHoras).toFixed(1)} km/h média`,
-      sustentabilidade: `${rota.detalhes.emissaoCO2 || '0'} CO₂ • ${rota.detalhes.calorias || 0} cal`,
       economia: isNaN(custoPorKm) ? 'Gratuito' : `R$ ${custoPorKm.toFixed(2)}/km`
     };
   }
 }
+

@@ -3,7 +3,7 @@
   "version": 1,
   "newProjectRoot": "projects",
   "projects": {
-    "mobiurb": {
+    "mindway": {
       "projectType": "application",
       "schematics": {
         "@schematics/angular:class": {
@@ -53,7 +53,12 @@
               }
             ],
             "styles": [
-              "src/styles.css"
+              "src/styles.css",
+              "node_modules/maplibre-gl/dist/maplibre-gl.css"
+
+            ],
+            "scripts": [
+              "node_modules/maplibre-gl/dist/maplibre-gl.js" 
             ]
           },
           "configurations": {
@@ -84,10 +89,10 @@
           "builder": "@angular/build:dev-server",
           "configurations": {
             "production": {
-              "buildTarget": "mobiurb:build:production"
+              "buildTarget": "mindway:build:production"
             },
             "development": {
-              "buildTarget": "mobiurb:build:development"
+              "buildTarget": "mindway:build:development"
             }
           },
           "defaultConfiguration": "development"

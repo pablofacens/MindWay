@@ -90,7 +90,7 @@ export class ServicoBicicletas {
     try {
       const corsProxy = 'https://api.allorigins.win/raw?url=';
       const gbfsUrl = `${corsProxy}${encodeURIComponent('https://gbfs.tembici.com.br/sampa/gbfs/gbfs.json')}`;
-      
+
       const response = await fetch(gbfsUrl);
       if (response.ok) {
         const data = await response.json();
@@ -150,7 +150,7 @@ export class ServicoBicicletas {
 
   obterEstacoesMock(): EstacaoBicicleta[] {
     return [
-      
+
       {
         id: 'SP001',
         nome: 'Estação MASP',
@@ -208,7 +208,7 @@ export class ServicoBicicletas {
         empresa: 'Tembici'
       },
 
-      
+
       {
         id: 'SOR001',
         nome: 'Terminal Central Sorocaba',
@@ -238,7 +238,7 @@ export class ServicoBicicletas {
         empresa: 'Prefeitura Sorocaba'
       },
 
-      
+
       {
         id: 'ITU001',
         nome: 'Centro Histórico Itu',
@@ -341,9 +341,9 @@ export class ServicoBicicletas {
 
   obterEstacaoMaisProxima(lat: number, lon: number, cidade?: string): EstacaoBicicleta | null {
     let estacoes = this.obterEstacoesMock();
-    
+
     if (cidade) {
-      estacoes = estacoes.filter(e => 
+      estacoes = estacoes.filter(e =>
         e.cidade.toLowerCase().includes(cidade.toLowerCase())
       );
     }
@@ -353,24 +353,24 @@ export class ServicoBicicletas {
     return estacoes.reduce((closest, current) => {
       const currentDistance = this.calcularDistancia(lat, lon, current.lat, current.lon);
       const closestDistance = this.calcularDistancia(lat, lon, closest.lat, closest.lon);
-      
+
       return currentDistance < closestDistance ? current : closest;
     });
   }
 
   private calcularDistancia(lat1: number, lon1: number, lat2: number, lon2: number): number {
-    const R = 6371; 
+    const R = 6371;
     const dLat = this.deg2rad(lat2 - lat1);
     const dLon = this.deg2rad(lon2 - lon1);
-    const a = 
-      Math.sin(dLat/2) * Math.sin(dLat/2) +
-      Math.cos(this.deg2rad(lat1)) * Math.cos(this.deg2rad(lat2)) * 
-      Math.sin(dLon/2) * Math.sin(dLon/2);
-    const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
+    const a =
+      Math.sin(dLat / 2) * Math.sin(dLat / 2) +
+      Math.cos(this.deg2rad(lat1)) * Math.cos(this.deg2rad(lat2)) *
+      Math.sin(dLon / 2) * Math.sin(dLon / 2);
+    const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
     return R * c;
   }
 
   private deg2rad(deg: number): number {
-    return deg * (Math.PI/180);
+    return deg * (Math.PI / 180);
   }
 }

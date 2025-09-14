@@ -10,7 +10,6 @@ import { ServicoGeolocalizacao } from '../servicos/servicoGeolocalizacao';
   template: `
     <div class="bg-white p-6 rounded-lg shadow-md">
       <div class="space-y-4">
-        <!-- Origem -->
         <div>
           <label class="block text-sm font-medium text-gray-700 mb-2">Origem</label>
           <div class="relative">
@@ -23,7 +22,7 @@ import { ServicoGeolocalizacao } from '../servicos/servicoGeolocalizacao';
             @if(sugestoesOrigem().length > 0) {
               <div class="absolute z-10 w-full bg-white border border-gray-300 rounded-lg mt-1 max-h-48 overflow-y-auto shadow-lg">
                 @for(sugestao of sugestoesOrigem(); track sugestao.place_id) {
-                  <div 
+                  <div
                     (click)="selecionarOrigem(sugestao)"
                     class="p-3 hover:bg-gray-100 cursor-pointer border-b border-gray-100 last:border-b-0">
                     <div class="text-sm text-gray-900">{{ sugestao.display_name }}</div>
@@ -35,7 +34,6 @@ import { ServicoGeolocalizacao } from '../servicos/servicoGeolocalizacao';
           </div>
         </div>
 
-        <!-- Destino -->
         <div>
           <label class="block text-sm font-medium text-gray-700 mb-2">Destino</label>
           <div class="relative">
@@ -48,7 +46,7 @@ import { ServicoGeolocalizacao } from '../servicos/servicoGeolocalizacao';
             @if(sugestoesDestino().length > 0) {
               <div class="absolute z-10 w-full bg-white border border-gray-300 rounded-lg mt-1 max-h-48 overflow-y-auto shadow-lg">
                 @for(sugestao of sugestoesDestino(); track sugestao.place_id) {
-                  <div 
+                  <div
                     (click)="selecionarDestino(sugestao)"
                     class="p-3 hover:bg-gray-100 cursor-pointer border-b border-gray-100 last:border-b-0">
                     <div class="text-sm text-gray-900">{{ sugestao.display_name }}</div>
@@ -60,7 +58,6 @@ import { ServicoGeolocalizacao } from '../servicos/servicoGeolocalizacao';
           </div>
         </div>
 
-        <!-- Informações da cidade selecionada -->
         @if(cidadeOrigemSelecionada) {
           <div class="p-3 bg-blue-50 rounded-lg text-sm">
             <div class="font-medium text-blue-800">{{ cidadeOrigemSelecionada }}</div>
@@ -68,7 +65,6 @@ import { ServicoGeolocalizacao } from '../servicos/servicoGeolocalizacao';
           </div>
         }
 
-        <!-- Botão de busca -->
         <button
           (click)="buscarRotas()"
           [disabled]="!podeBuscar() || estaCarregando"
@@ -82,12 +78,11 @@ import { ServicoGeolocalizacao } from '../servicos/servicoGeolocalizacao';
               Buscando rotas...
             </span>
           } @else {
-            <span>Buscar rotas de transporte público</span>
+            <span>Buscar rotas</span>
           }
         </button>
       </div>
 
-      <!-- Informações de clima e qualidade do ar -->
       @if(clima || qualidadeAr) {
         <div class="mt-4 p-3 bg-gray-50 rounded-lg">
           <div class="flex items-center justify-between text-sm">
@@ -99,8 +94,8 @@ import { ServicoGeolocalizacao } from '../servicos/servicoGeolocalizacao';
             }
             @if(qualidadeAr) {
               <div class="flex items-center space-x-2">
-                <div 
-                  class="w-3 h-3 rounded-full" 
+                <div
+                  class="w-3 h-3 rounded-full"
                   [style.backgroundColor]="qualidadeAr.color">
                 </div>
                 <span>Ar: {{ qualidadeAr.level }}</span>
@@ -110,7 +105,6 @@ import { ServicoGeolocalizacao } from '../servicos/servicoGeolocalizacao';
         </div>
       }
 
-      <!-- Dicas de transporte por cidade -->
       @if(cidadeOrigemSelecionada && !estaCarregando) {
         <div class="mt-4 p-3 bg-green-50 rounded-lg">
           <div class="text-sm">
@@ -129,31 +123,48 @@ import { ServicoGeolocalizacao } from '../servicos/servicoGeolocalizacao';
   `
 })
 export class FormularioBuscaComponent {
-obterInfoCidade(arg0: string) {
-throw new Error('Method not implemented.');
-}
-obterDicasTransporte(arg0: string) {
-throw new Error('Method not implemented.');
-}
+
+  obterInfoCidade(cidade: string): string {
+    const infos: { [key: string]: string } = {
+      'Sorocaba': 'Conhecida pelo sistema de transporte integrado e ciclovias.',
+      'Itu': 'Transporte focado no centro histórico e bairros adjacentes.',
+      'São Paulo': 'Sistema com Metrô, CPTM e Bilhete Único.',
+      'Campinas': 'Possui um sistema de corredores de ônibus (BRT).',
+      'Santos': 'Utiliza o VLT (Veículo Leve sobre Trilhos) como principal modal.'
+    };
+    return infos[cidade] || `Informações sobre ${cidade} não disponíveis.`;
+  }
+
+  obterDicasTransporte(cidade: string): string {
+    const dicas: { [key: string]: string } = {
+      'Sorocaba': 'Utilize o cartão de transporte local para economizar nas integrações.',
+      'Itu': 'As principais linhas partem do terminal central, próximo à prefeitura.',
+      'São Paulo': 'Planeje viagens com antecedência para evitar horários de pico no Metrô.',
+      'Campinas': 'Verifique os horários do BRT para viagens mais rápidas pela cidade.',
+      'Santos': 'O VLT é ideal para percorrer a orla da praia e acessar o centro.'
+    };
+    return dicas[cidade] || `Verifique os horários e tarifas no site da prefeitura de ${cidade}.`;
+  }
+
   @Input() estaCarregando = false;
   @Input() clima: any = null;
   @Input() qualidadeAr: any = null;
   @Input() errosBusca: string | null = null;
   @Output() buscarRotasEvento = new EventEmitter<{
-    origem: {lat: number, lng: number, cidade: string}, 
-    destino: {lat: number, lng: number, cidade: string}
+    origem: { lat: number, lng: number, cidade: string },
+    destino: { lat: number, lng: number, cidade: string }
   }>();
 
   private servicoGeolocalizacao = inject(ServicoGeolocalizacao);
 
   enderecoOrigem = '';
   enderecoDestino = '';
-  
+
   sugestoesOrigem = signal<any[]>([]);
   sugestoesDestino = signal<any[]>([]);
-  
-  private origemSelecionada: {lat: number, lng: number, cidade: string} | null = null;
-  private destinoSelecionado: {lat: number, lng: number, cidade: string} | null = null;
+
+  private origemSelecionada: { lat: number, lng: number, cidade: string } | null = null;
+  private destinoSelecionado: { lat: number, lng: number, cidade: string } | null = null;
 
   cidadeOrigemSelecionada: string | null = null;
 
@@ -162,7 +173,7 @@ throw new Error('Method not implemented.');
 
   aoDigitarOrigem(): void {
     if (this.timeoutOrigem) clearTimeout(this.timeoutOrigem);
-    
+
     if (this.enderecoOrigem.length < 3) {
       this.sugestoesOrigem.set([]);
       return;
@@ -178,7 +189,7 @@ throw new Error('Method not implemented.');
 
   aoDigitarDestino(): void {
     if (this.timeoutDestino) clearTimeout(this.timeoutDestino);
-    
+
     if (this.enderecoDestino.length < 3) {
       this.sugestoesDestino.set([]);
       return;
@@ -195,8 +206,8 @@ throw new Error('Method not implemented.');
   selecionarOrigem(sugestao: any): void {
     this.enderecoOrigem = sugestao.display_name;
     const cidade = this.detectarCidade(sugestao);
-    this.origemSelecionada = { 
-      lat: parseFloat(sugestao.lat), 
+    this.origemSelecionada = {
+      lat: parseFloat(sugestao.lat),
       lng: parseFloat(sugestao.lon),
       cidade: cidade
     };
@@ -207,8 +218,8 @@ throw new Error('Method not implemented.');
   selecionarDestino(sugestao: any): void {
     this.enderecoDestino = sugestao.display_name;
     const cidade = this.detectarCidade(sugestao);
-    this.destinoSelecionado = { 
-      lat: parseFloat(sugestao.lat), 
+    this.destinoSelecionado = {
+      lat: parseFloat(sugestao.lat),
       lng: parseFloat(sugestao.lon),
       cidade: cidade
     };
@@ -230,11 +241,13 @@ throw new Error('Method not implemented.');
 
   public detectarCidade(sugestao: any): string {
     const endereco = sugestao.display_name.toLowerCase();
-    
+
     if (endereco.includes('sorocaba')) return 'Sorocaba';
     if (endereco.includes('itu')) return 'Itu';
     if (endereco.includes('campinas')) return 'Campinas';
     if (endereco.includes('santos')) return 'Santos';
-        return '';
-      }
-    }
+    if (endereco.includes('são paulo')) return 'São Paulo';
+
+    return 'São Paulo';
+  }
+}

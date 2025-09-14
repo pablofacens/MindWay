@@ -65,7 +65,7 @@ export class ServicoOnibus {
 
   obterLinhasOnibus(): LinhaOnibus[] {
     return [
-      
+
       {
         numero: '875A-10',
         nome: 'Term. Bandeira - Jd. Ângela',
@@ -103,7 +103,7 @@ export class ServicoOnibus {
         intervalo: '5-8 min'
       },
 
-      
+
       {
         numero: '001',
         nome: 'Terminal Central - Jd. Vera Cruz',
@@ -129,7 +129,7 @@ export class ServicoOnibus {
         intervalo: '20-25 min'
       },
 
-      
+
       {
         numero: '101',
         nome: 'Centro - Cidade Nova',
@@ -155,7 +155,7 @@ export class ServicoOnibus {
         intervalo: '45-60 min'
       },
 
-      
+
       {
         numero: '142',
         nome: 'Sorocaba - São Paulo (Barra Funda)',
@@ -181,7 +181,7 @@ export class ServicoOnibus {
         intervalo: '40-60 min'
       },
 
-      
+
       {
         numero: 'INT-001',
         nome: 'Sorocaba - Itu',
@@ -200,19 +200,19 @@ export class ServicoOnibus {
   obterTarifasPorCidade(cidade: string): TarifaTransporte[] {
     switch (cidade.toLowerCase()) {
       case 'são paulo':
-        return this.tarifasEstadoSP.filter(t => 
+        return this.tarifasEstadoSP.filter(t =>
           t.tipo.includes('SP Capital') || t.tipo.includes('Metrô SP')
         );
       case 'sorocaba':
-        return this.tarifasEstadoSP.filter(t => 
+        return this.tarifasEstadoSP.filter(t =>
           t.tipo.includes('Sorocaba') || t.tipo.includes('EMTU')
         );
       case 'itu':
-        return this.tarifasEstadoSP.filter(t => 
+        return this.tarifasEstadoSP.filter(t =>
           t.tipo.includes('Itu') || t.tipo.includes('EMTU')
         );
       default:
-        return this.tarifasEstadoSP.filter(t => 
+        return this.tarifasEstadoSP.filter(t =>
           t.tipo.includes('EMTU') || t.tipo.includes('Intermunicipal')
         );
     }
@@ -226,7 +226,7 @@ export class ServicoOnibus {
 
   obterOnibusProximosMock(cidade: string = 'São Paulo'): LinhaOnibus[] {
     const linhas = this.obterLinhasPorCidade(cidade);
-    
+
     return linhas.slice(0, Math.min(5, linhas.length));
   }
 
@@ -238,8 +238,8 @@ export class ServicoOnibus {
   } {
     const linhasOrigem = this.obterLinhasPorCidade(origem);
     const linhasDestino = this.obterLinhasPorCidade(destino);
-    
-    
+
+
     if (origem.toLowerCase() === destino.toLowerCase()) {
       const tarifaLocal = this.obterTarifasPorCidade(origem)[0];
       return {
@@ -250,7 +250,7 @@ export class ServicoOnibus {
       };
     }
 
-    
+
     const linhasIntermunicipal = this.obterLinhasOnibus().filter(linha =>
       linha.tipo === 'intermunicipal' &&
       linha.cidades.some(c => c.toLowerCase().includes(origem.toLowerCase())) &&
@@ -266,7 +266,7 @@ export class ServicoOnibus {
       };
     }
 
-    
+
     const tarifaEMTU = this.tarifasEstadoSP.find(t => t.tipo.includes('EMTU'));
     return {
       tarifa: tarifaEMTU?.valor || 5.25,

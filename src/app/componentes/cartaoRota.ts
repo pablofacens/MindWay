@@ -80,18 +80,6 @@ import { Rota } from '../servicos/servicoRotas';
               <div class="font-medium text-gray-900">Caminhada</div>
               <div class="text-gray-600">{{ rota.detalhes.distanciaCaminhada }}</div>
             </div>
-            @if(rota.detalhes.emissaoCO2) {
-              <div class="bg-gray-50 p-2 rounded">
-                <div class="font-medium text-gray-900">CO₂</div>
-                <div class="text-gray-600">{{ rota.detalhes.emissaoCO2 }}</div>
-              </div>
-            }
-            @if(rota.detalhes.calorias) {
-              <div class="bg-gray-50 p-2 rounded">
-                <div class="font-medium text-gray-900">Calorias</div>
-                <div class="text-gray-600">{{ rota.detalhes.calorias }} cal</div>
-              </div>
-            }
             <div class="bg-gray-50 p-2 rounded">
               <div class="font-medium text-gray-900">Tarifa</div>
               <div class="text-gray-600">{{ rota.detalhes.custoTransporte || rota.custo }}</div>
@@ -139,7 +127,7 @@ export class CartaoRotaComponent {
   }
 
   alternarDetalhes(event: Event): void {
-    event.stopPropagation(); 
+    event.stopPropagation();
     this.mostrarDetalhes = !this.mostrarDetalhes;
   }
 
@@ -171,20 +159,20 @@ export class CartaoRotaComponent {
           return 'Evite horário de pico (7-9h e 17-19h) para viagem mais confortável.';
         }
         return 'Opção mais rápida com menor tempo de espera.';
-      
+
       case 'Econômica':
         if (this.rota.detalhes.linhasOnibus && this.rota.detalhes.linhasOnibus.length > 1) {
-          return 'Transferência incluída no Bilhete Único. Valide apenas na primeira linha.';
+          return 'Transferência incluída no Bilhete Único.';
         }
         return 'Melhor custo-benefício. Confira horários no app da empresa.';
-      
+
       case 'Verde':
         const tempoViagem = this.rota.detalhes.tempoTotal;
         if (tempoViagem > 60) {
           return 'Viagem longa de bike. Considere dividir com transporte público.';
         }
         return 'Zero emissão! Lembre-se do capacete e respeite a ciclovia.';
-      
+
       default:
         return 'Planeje sua viagem com antecedência.';
     }

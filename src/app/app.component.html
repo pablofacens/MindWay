@@ -1,198 +1,101 @@
-<!-- Container Principal com Fundo Cinza Claro -->
 <div class="bg-gray-50 min-h-screen font-sans text-gray-800">
   <div class="container mx-auto p-4 md:p-8">
-    
-    <!-- Cabeçalho da Aplicação -->
+
     <header class="text-center mb-8 md:mb-12">
-      <h1 class="text-4xl md:text-5xl font-bold text-green-600">MobiUrb</h1>
-      <p class="text-lg text-gray-500 mt-2">Seu assistente de mobilidade urbana inteligente para São Paulo.</p>
-      <p class="text-sm text-gray-400 mt-1">Transporte público • Bicicletas compartilhadas • Rotas sustentáveis</p>
+      <h1 class="text-4xl md:text-5xl font-bold text-green-600">MindWay</h1>
+      <p class="text-lg text-gray-500 mt-2">Mobilidade Inteligente</p>
     </header>
 
     <main class="bg-white rounded-2xl shadow-lg p-6 md:p-8">
       <div class="grid grid-cols-1 lg:grid-cols-12 gap-8">
-        
-        <!-- Coluna de Controle (Busca e Rotas) -->
+
         <aside class="lg:col-span-4">
-          <!-- Formulário de Busca -->
-          <app-formulario-busca
-            (buscarRotasEvento)="aoBuscarRotas($event)"
-            [estaCarregando]="estaCarregando()"
-            [clima]="clima()"
-            [qualidadeAr]="qualidadeAr()"
-            [errosBusca]="erroBusca()">
+          <app-formulario-busca (buscarRotasEvento)="aoBuscarRotas($event)" [estaCarregando]="estaCarregando()"
+            [clima]="clima()" [qualidadeAr]="qualidadeAr()" [errosBusca]="erroBusca()">
           </app-formulario-busca>
 
-          <!-- Controles de Camadas do Mapa -->
           <div class="mt-4">
-            <app-alternador-camadas
-              [mostrarEstacoesBicicleta]="mostrarEstacoesBicicleta()"
-              [mostrarTransito]="mostrarTransito()"
-              [mostrarOnibus]="mostrarOnibus()"
-              [mostrarPontosInteresse]="mostrarPontosInteresse()"
-              [contadorBikes]="contadorBikes()"
-              [contadorOnibus]="contadorOnibus()"
-              (alternarBicicletasEvento)="alternarEstacoesBicicleta()"
-              (alternarTransitoEvento)="alternarTransito()"
-              (alternarOnibusEvento)="alternarOnibus()"
+            <app-alternador-camadas [mostrarEstacoesBicicleta]="mostrarEstacoesBicicleta()"
+              [mostrarTransito]="mostrarTransito()" [mostrarOnibus]="mostrarOnibus()"
+              [mostrarPontosInteresse]="mostrarPontosInteresse()" [contadorBikes]="contadorBikes()"
+              [contadorOnibus]="contadorOnibus()" (alternarBicicletasEvento)="alternarEstacoesBicicleta()"
+              (alternarTransitoEvento)="alternarTransito()" (alternarOnibusEvento)="alternarOnibus()"
               (alternarPontosInteresseEvento)="alternarPontosInteresse()">
             </app-alternador-camadas>
           </div>
 
-          <!-- Seção de Cards de Rotas -->
           @if (rotas().length > 0 && !estaCarregando()) {
-            <div class="space-y-4 mt-8">
-              <div class="flex items-center justify-between">
-                <h2 class="text-2xl font-semibold">Opções encontradas:</h2>
-                <span class="text-sm text-gray-500">{{ rotas().length }} rotas</span>
-              </div>
-              
-              @for (rota of rotas(); track rota.id) {
-                <app-cartao-rota
-                  [rota]="rota"
-                  [estaSelecionada]="rotaSelecionada()?.id === rota.id"
-                  (selecionarRotaEvento)="selecionarRota($event)">
-                </app-cartao-rota>
-              }
-
-              <!-- Resumo das Rotas -->
-              <div class="mt-6 p-4 bg-gray-50 rounded-lg">
-                <h3 class="font-medium text-gray-900 mb-2">📊 Resumo das Opções:</h3>
-                @if (obterEstatisticasGerais().rotaMaisRapida) {
-                  <div class="grid grid-cols-1 gap-2 text-sm text-gray-600">
-                    <div>⚡ Mais rápida: {{ obterEstatisticasGerais().rotaMaisRapida }}</div>
-                    <div>💰 Mais econômica: {{ obterEstatisticasGerais().rotaMaisEconomica }}</div>
-                    <div>🌱 Mais sustentável: {{ obterEstatisticasGerais().rotaMaisSustentavel }}</div>
-                  </div>
-                }
-              </div>
+          <div class="space-y-4 mt-8">
+            <div class="flex items-center justify-between">
+              <h2 class="text-2xl font-semibold">Opções encontradas:</h2>
+              <span class="text-sm text-gray-500">{{ rotas().length }} rotas</span>
             </div>
-          }
 
-          <!-- Estado de Carregamento -->
+            @for (rota of rotas(); track rota.id) {
+            <app-cartao-rota [rota]="rota" [estaSelecionada]="rotaSelecionada()?.id === rota.id"
+              (selecionarRotaEvento)="selecionarRota($event)">
+            </app-cartao-rota>
+            }
+          </div>
+          }
           @if (estaCarregando()) {
-            <div class="mt-8 p-6 text-center">
-              <div class="animate-spin w-8 h-8 border-4 border-green-500 border-t-transparent rounded-full mx-auto mb-3"></div>
-              <p class="text-gray-600">Buscando melhores rotas...</p>
+          <div class="mt-8 p-6 text-center">
+            <div class="animate-spin w-8 h-8 border-4 border-green-500 border-t-transparent rounded-full mx-auto mb-3">
             </div>
-          }
-
-          <!-- Informações da Cidade Atual -->
-          @if (obterInformacoesCidadeAtual() && !estaCarregando()) {
-            <div class="mt-6 p-3 bg-blue-50 rounded-lg">
-              <h3 class="text-sm font-medium text-blue-900 mb-1">ℹ️ Informações da Região:</h3>
-              <p class="text-xs text-blue-700">{{ obterInformacoesCidadeAtual() }}</p>
-            </div>
+            <p class="text-gray-600">Buscando melhores rotas...</p>
+          </div>
           }
         </aside>
-        
-        <!-- Coluna de Resultados (Mapa) -->
+
         <section class="lg:col-span-8">
           <div class="h-[400px] lg:h-[650px] w-full bg-gray-200 rounded-lg shadow-md overflow-hidden relative">
-            <!-- Container do Mapa -->
             <div id="map" class="w-full h-full">
-              <!-- Placeholder quando mapa não está inicializado -->
               @if(!(servicoMapa.mapaInicializado$ | async)) {
-                <div class="h-full flex flex-col items-center justify-center text-center p-8">
-                  <svg class="w-16 h-16 text-gray-300 mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 20l-5.447-2.724A1 1 0 013 16.382V5.618a1 1 0 011.447-.894L9 7m0 13l6-3m-6 3V7m6 10l5.447 2.724A1 1 0 0021 16.382V5.618a1 1 0 00-1.447-.894L15 7m-6 3l6-3m0 0l-6-3m6 3v10"></path>
-                  </svg>
-                  <h3 class="text-xl font-semibold text-gray-700 mb-2">Mapa interativo</h3>
-                  <p class="text-gray-500">Busque uma rota para visualizar o trajeto no mapa.</p>
-                  <p class="text-xs text-gray-400 mt-2">Suporte: São Paulo, Sorocaba, Itu e região metropolitana</p>
-                </div>
+              <div class="h-full flex flex-col items-center justify-center text-center p-8">
+                <svg class="w-16 h-16 text-gray-300 mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                    d="M9 20l-5.447-2.724A1 1 0 013 16.382V5.618a1 1 0 011.447-.894L9 7m0 13l6-3m-6 3V7m6 10l5.447 2.724A1 1 0 0021 16.382V5.618a1 1 0 00-1.447-.894L15 7m-6 3l6-3m0 0l-6-3m6 3v10">
+                  </path>
+                </svg>
+                <h3 class="text-xl font-semibold text-gray-700 mb-2">Mapa interativo</h3>
+                <p class="text-gray-500">Busque uma rota para visualizar o trajeto no mapa.</p>
+              </div>
               }
             </div>
 
-            <!-- Overlay de informações da rota selecionada -->
             @if(rotaSelecionada() && (servicoMapa.mapaInicializado$ | async)) {
-              <div class="absolute top-4 left-4 bg-white/90 backdrop-blur-sm rounded-lg p-3 shadow-lg max-w-xs">
-                <div class="flex items-center space-x-2 mb-2">
-                  <div class="w-3 h-3 rounded-full" [style.backgroundColor]="rotaSelecionada()!.corCaminho"></div>
-                  <span class="font-medium text-sm">{{ rotaSelecionada()!.tipo }}</span>
-                </div>
-                <div class="text-xs text-gray-600 space-y-1">
-                  <div>⏱️ {{ rotaSelecionada()!.duracao }}</div>
-                  <div>💰 {{ rotaSelecionada()!.custo }}</div>
-                  <div>📏 {{ rotaSelecionada()!.detalhes.distancia }}</div>
-                  @if(rotaSelecionada()!.detalhes.emissaoCO2) {
-                    <div>🌱 {{ rotaSelecionada()!.detalhes.emissaoCO2 }} CO₂</div>
+            <div class="absolute top-4 left-4 bg-white/90 backdrop-blur-sm rounded-lg p-3 shadow-lg max-w-xs">
+              <div class="flex items-center space-x-2 mb-2">
+                <div class="w-3 h-3 rounded-full" [style.backgroundColor]="rotaSelecionada()!.corCaminho"></div>
+                <span class="font-medium text-sm">{{ rotaSelecionada()!.tipo }}</span>
+              </div>
+              <div class="text-xs text-gray-600 space-y-1">
+                <div>⏱️ {{ rotaSelecionada()!.duracao }}</div>
+                <div>💰 {{ rotaSelecionada()!.custo }}</div>
+                <div>📏 {{ rotaSelecionada()!.detalhes.distancia }}</div>
+              </div>
+            </div>
+            }
+
+            @if((servicoMapa.mapaInicializado$ | async)) {
+            <div class="absolute bottom-4 left-4">
+              <div class="bg-white/90 backdrop-blur-sm rounded-lg p-2 shadow-lg">
+                <div class="flex space-x-2 text-xs">
+                  <span class="text-gray-600">🟢 Origem</span>
+                  <span class="text-gray-600">🔴 Destino</span>
+                  @if(mostrarEstacoesBicicleta()) {
+                  <span class="text-green-600">🚲 Bikes</span>
+                  }
+                  @if(mostrarOnibus()) {
+                  <span class="text-yellow-600">🚌 Ônibus</span>
                   }
                 </div>
               </div>
-            }
-
-            <!-- Controles adicionais do mapa -->
-            @if((servicoMapa.mapaInicializado$ | async)) {
-              <div class="absolute bottom-4 left-4">
-                <div class="bg-white/90 backdrop-blur-sm rounded-lg p-2 shadow-lg">
-                  <div class="flex space-x-2 text-xs">
-                    <span class="text-gray-600">🟢 Origem</span>
-                    <span class="text-gray-600">🔴 Destino</span>
-                    @if(mostrarEstacoesBicicleta()) {
-                      <span class="text-green-600">🚲 Bikes</span>
-                    }
-                    @if(mostrarOnibus()) {
-                      <span class="text-yellow-600">🚌 Ônibus</span>
-                    }
-                  </div>
-                </div>
-              </div>
+            </div>
             }
           </div>
-
-          <!-- Informações adicionais abaixo do mapa -->
-          @if(rotas().length > 0 && !estaCarregando()) {
-            <div class="mt-4 grid grid-cols-1 md:grid-cols-3 gap-4">
-              <!-- Comparação de impacto ambiental -->
-              <div class="bg-green-50 p-4 rounded-lg">
-                <h3 class="font-medium text-green-900 mb-2">🌱 Impacto Ambiental</h3>
-                @for(rota of rotas(); track rota.id) {
-                  <div class="flex justify-between items-center text-sm mb-1">
-                    <span class="text-green-700">{{ rota.tipo }}:</span>
-                    <span class="font-medium">{{ rota.detalhes.emissaoCO2 || '0 kg' }}</span>
-                  </div>
-                }
-              </div>
-
-              <!-- Comparação de custos -->
-              <div class="bg-blue-50 p-4 rounded-lg">
-                <h3 class="font-medium text-blue-900 mb-2">💰 Custos</h3>
-                @for(rota of rotas(); track rota.id) {
-                  <div class="flex justify-between items-center text-sm mb-1">
-                    <span class="text-blue-700">{{ rota.tipo }}:</span>
-                    <span class="font-medium">{{ rota.custo }}</span>
-                  </div>
-                }
-              </div>
-
-              <!-- Comparação de tempo -->
-              <div class="bg-yellow-50 p-4 rounded-lg">
-                <h3 class="font-medium text-yellow-900 mb-2">⏱️ Tempo</h3>
-                @for(rota of rotas(); track rota.id) {
-                  <div class="flex justify-between items-center text-sm mb-1">
-                    <span class="text-yellow-700">{{ rota.tipo }}:</span>
-                    <span class="font-medium">{{ rota.duracao }}</span>
-                  </div>
-                }
-              </div>
-            </div>
-          }
         </section>
       </div>
     </main>
-
-    <!-- Footer com informações -->
-    <footer class="mt-8 text-center text-sm text-gray-500">
-      <p>MobiUrb • Dados de transporte público do Estado de São Paulo</p>
-      <p class="mt-1">
-        <span class="mx-2">•</span>
-        <a href="#" class="hover:text-green-600">Sobre</a>
-        <span class="mx-2">•</span>
-        <a href="#" class="hover:text-green-600">Privacidade</a>
-        <span class="mx-2">•</span>
-        <a href="#" class="hover:text-green-600">Contato</a>
-      </p>
-    </footer>
   </div>
 </div>

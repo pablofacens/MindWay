@@ -46,19 +46,17 @@ import { CommonModule } from '@angular/common';
         </span>
       </button>
 
-      <!-- Botão adicional para pontos de interesse -->
       <button
         (click)="alternarPontosInteresse()"
         [class]="obterClassesBotao(mostrarPontosInteresse)"
         class="px-3 py-2 rounded-lg text-sm font-medium transition-all duration-200">
         <span class="flex items-center space-x-1">
           <span>📍</span>
-          <span>POI</span>
+          <span>Terminais</span>
         </span>
       </button>
     </div>
 
-    <!-- Legendas quando ativo -->
     @if(mostrarLegendas()) {
       <div class="mt-3 p-3 bg-gray-50 rounded-lg">
         <div class="text-xs text-gray-600">
@@ -97,7 +95,6 @@ import { CommonModule } from '@angular/common';
       </div>
     }
 
-    <!-- Informações adicionais sobre as camadas ativas -->
     @if(informacoesExtras()) {
       <div class="mt-2 text-xs text-gray-500">
         {{ informacoesExtras() }}
@@ -110,11 +107,10 @@ export class AlternadorCamadasComponent {
   @Input() mostrarTransito = false;
   @Input() mostrarOnibus = false;
   @Input() mostrarPontosInteresse = false;
-  
-  // Contadores opcionais para mostrar quantos elementos estão visíveis
+
   @Input() contadorBikes = 0;
   @Input() contadorOnibus = 0;
-  
+
   @Output() alternarBicicletasEvento = new EventEmitter<void>();
   @Output() alternarTransitoEvento = new EventEmitter<void>();
   @Output() alternarOnibusEvento = new EventEmitter<void>();
@@ -138,7 +134,7 @@ export class AlternadorCamadasComponent {
 
   obterClassesBotao(ativo: boolean): string {
     const classesBase = 'transition-all duration-200 hover:scale-105';
-    
+
     if (ativo) {
       return `${classesBase} bg-gradient-to-r from-green-500 to-green-600 text-white shadow-md`;
     }
@@ -146,13 +142,13 @@ export class AlternadorCamadasComponent {
   }
 
   mostrarLegendas(): boolean {
-    return this.mostrarEstacoesBicicleta || this.mostrarTransito || 
-           this.mostrarOnibus || this.mostrarPontosInteresse;
+    return this.mostrarEstacoesBicicleta || this.mostrarTransito ||
+      this.mostrarOnibus || this.mostrarPontosInteresse;
   }
 
   informacoesExtras(): string {
     const camadasAtivas = [];
-    
+
     if (this.mostrarEstacoesBicicleta) {
       camadasAtivas.push('bicicletas');
     }
@@ -163,7 +159,8 @@ export class AlternadorCamadasComponent {
       camadasAtivas.push('trânsito');
     }
     if (this.mostrarPontosInteresse) {
-      camadasAtivas.push('pontos de interesse');
+
+      camadasAtivas.push('terminais');
     }
 
     if (camadasAtivas.length === 0) {
