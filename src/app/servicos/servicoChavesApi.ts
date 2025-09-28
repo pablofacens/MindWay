@@ -5,9 +5,9 @@ import { Injectable } from '@angular/core';
 })
 export class ServicoChavesApi {
   private chavesApi = {
-    mapTiler: 'SUA_CHAVE',
-    openWeatherMap: 'SUA_CHAVE',
-    openRouteService: 'SUA_CHAVE',
+    mapTiler: 'SUA_CHAVE_AQUI',
+    openWeatherMap: 'SUA_CHAVE_AQUI',
+    openRouteService: 'SUA_CHAVE_AQUI',
   };
 
   constructor() { }
