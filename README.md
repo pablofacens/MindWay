@@ -15,70 +15,54 @@
 
 ## 📖 Sobre o Projeto
 
-Cansou de ficar pulando entre vários apps pra descobrir o melhor jeito de ir de um lugar pro outro? O MindWay resolve isso: uma plataforma que reúne todas as suas opções de transporte num lugar só. Seja caminhando, uso de biciletas, de ônibus ou de carro, mostraremos as melhores rotas considerando o que você decidir.
-O MindWay calcula **rotas multimodais inteligentes**, combinando diferentes meios de transporte numa mesma viagem pra você chegar no seu destino.
+Cansou de ficar pulando entre vários apps pra descobrir o melhor jeito de ir de um lugar pro outro? O MindWay resolve isso: uma plataforma que vai ter diferentes opções de transporte no mesmo lugar. Seja caminhando, uso de biciletas, de ônibus ou de carro, mostraremos as melhores rotas considerando o que você decidir.
 
-### 💡 Exemplo prático
+### Exemplo prático
 
 Quer ir pro trabalho economizando e fazendo exercício? 
 
 ```
-🚶 Caminha 5min até estação de bike → 🚲 Pedala 15min → 🚶 Deixa bike e caminha 3min
+Caminha 5min até estação de bike → Pedala 15min → Deixa bike e caminha 3min
 Resultado: Economizou dinheiro, fez exercício, ganhou pontos e ainda ajudou o planeta!
 ```
 
 ---
 
-## ✨ Funcionalidades
+## Funcionalidades
 
-### 🌱 Rotas Verdes
-- Integração automática com estações de bike sharing
+### Rotas Verdes
+- Integração automática com estações de compartilhamento de biciletas
 - Cálculo de CO₂ economizado
 - Sistema de pontos por escolhas sustentáveis
 
-### 🗺️ Visualização Inteligente
+### Visualização Inteligente
 - Todas as opções de transporte em um único mapa
 - Interface limpa e intuitiva
 - Camadas alternáveis por modalidade
 
-### 📊 Métricas Detalhadas
-Cada rota apresenta:
-- ⏱️ Tempo estimado
-- 💰 Custo da viagem
-- 🔥 Calorias queimadas
-- 🌍 Impacto ambiental
-
-### 🏔️ Análise de Terreno
+### Análise de Terreno
 - Perfil completo de elevação
-- Gráfico visual interativo
-- Classificação de dificuldade
 - Ideal para ciclistas e pedestres
 
-### 🌤️ Informação Climática
+### Informação Climática
 - Condições atuais no destino
 - Previsão para as próximas 2 horas
-- Widget visual integrado
 
-### 🤖 Assistente com IA
+### Assistente com IA
 - Chat inteligente sobre suas rotas
-- Respostas contextualizadas
-- Powered by Google Gemini 1.5 Flash
 
-### 🏆 Sistema de Gamificação
+### Sistema de Gamificação
 - Badges desbloqueáveis
 - Conquistas por distância, CO₂ e rotas
-- Níveis e progresso visual
-- Ranking de fitness
 
-### 📈 Estatísticas Pessoais
-- Histórico completo de rotas
-- Gráficos mensais de atividade
+### Estatísticas Pessoais
+- Histórico de rotas
 - Total por modalidade de transporte
-- CO₂ total economizado
+- CO₂ economizado
 
 ---
 
-## 🛠️ Tecnologias
+## Tecnologias
 
 ### Frontend
 - **Angular 20.2.0** - Framework principal
@@ -86,7 +70,7 @@ Cada rota apresenta:
 - **TailwindCSS 4.1.13** - Framework CSS utilitário
 - **MapLibre GL 5.7.3** - Renderização de mapas open-source
 
-## 🗺️ APIs Utilizadas
+## APIs Utilizadas
 
 ### 10+ APIs Integradas:
 1. **OpenStreetMap** - Mapas base
@@ -100,7 +84,7 @@ Cada rota apresenta:
 
 ---
 
-## 🚀 Como Usar
+## Como Usar
 
 ### Fluxo Básico
 
@@ -110,9 +94,9 @@ Cada rota apresenta:
 2. **Busque rotas inteligentes**
    
    Receba 3 opções personalizadas:
-   - 🚗 **Rápida**: Menor tempo de viagem
-   - 💰 **Econômica**: Combinação com outro tipo de modal
-   - 🌱 **Verde**: Zero emissão de carbono
+   - **Rápida**: Menor tempo de viagem
+   - **Econômica**: Combinação com outro tipo de modal
+   - **Verde**: Zero emissão de carbono
 
 3. **Compare e escolha**
    - Visualize métricas detalhadas
