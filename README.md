@@ -116,7 +116,7 @@ Resultado: Economizou dinheiro, fez exercício, ganhou pontos e ainda ajudou o p
 
 ```bash
 # 1. Clone o repositório
-git clone https://github.com/seu-usuario/mindway.git
+git clone https://github.com/pablofacens/MindWay
 cd mindway
 
 # 2. Instale as dependências
