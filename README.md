@@ -102,4 +102,22 @@ Resultado: Economizou dinheiro, fez exercício, ganhou pontos e ainda ajudou o p
    - Visualize métricas detalhadas
    - Analise perfil de elevação
    - Confira pontos de interesse
-  
+
+---
+
+## Como Instalar e Executar
+
+### Pré-requisitos
+
+- **Node.js** 18+ ([download aqui](https://nodejs.org/))
+- **Angular CLI** 19+
+
+### Instalação
+
+```bash
+# 1. Clone o repositório
+git clone https://github.com/seu-usuario/mindway.git
+cd mindway
+
+# 2. Instale as dependências
+npm install
